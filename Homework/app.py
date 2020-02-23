@@ -21,15 +21,12 @@ Base.prepare(engine, reflect=True)
 Measurement = Base.classes.measurement
 Station = Base.classes.station
 
-#################################################
 # Flask Setup
-#################################################
 app = Flask(__name__)
 
 
-#################################################
 # Flask Routes
-#################################################
+
 
 @app.route("/")
 def welcome():
@@ -46,12 +43,12 @@ def welcome():
 @app.route('/api/v1.0/<start>')
 def get_t_start(start):
     session = Session(engine)
-    queryresult = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
+    Active = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
         filter(Measurement.date >= start).all()
     session.close()
 
     tobsall = []
-    for min,avg,max in queryresult:
+    for min,avg,max in Active:
         tobs_dict = {}
         tobs_dict["Min"] = min
         tobs_dict["Average"] = avg
@@ -63,12 +60,12 @@ def get_t_start(start):
 @app.route('/api/v1.0/<start>/<stop>')
 def get_t_start_stop(start,stop):
     session = Session(engine)
-    queryresult = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
+    Active = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
         filter(Measurement.date >= start).filter(Measurement.date <= stop).all()
     session.close()
 
     tobsall = []
-    for min,avg,max in queryresult:
+    for min,avg,max in Active:
         tobs_dict = {}
         tobs_dict["Min"] = min
         tobs_dict["Average"] = avg
@@ -80,11 +77,9 @@ def get_t_start_stop(start,stop):
 @app.route('/api/v1.0/tobs')
 def tobs():
     session = Session(engine)
-    lateststr = session.query(Measurement.date).order_by(Measurement.date.desc()).first()[0]
-    latestdate = dt.datetime.strptime(lateststr, '%Y-%m-%d')
-    querydate = dt.date(latestdate.year -1, latestdate.month, latestdate.day)
-    sel = [Measurement.date,Measurement.tobs]
-    queryresult = session.query(*sel).filter(Measurement.date >= querydate).all()
+    Most_active = session.query(Measurement.date).order_by(Measurement.date.desc()).first()[0]
+    Dataframe = [Measurement.date,Measurement.tobs]
+    Dataframe = session.query(*Dataframe).filter(Measurement.date >= query_date).all()
     session.close()
 
     tobsall = []
@@ -99,12 +94,12 @@ def tobs():
 @app.route('/api/v1.0/stations')
 def stations():
     session = Session(engine)
-    sel = [Station.station,Station.name,Station.latitude,Station.longitude,Station.elevation]
-    queryresult = session.query(*sel).all()
+    Dataframe = [Station.station,Station.name,Station.latitude,Station.longitude,Station.elevation]
+    Active = session.query(*Dataframe).all()
     session.close()
 
     stations = []
-    for station,name,lat,lon,el in queryresult:
+    for station,name,lat,lon,el in Active:
         station_dict = {}
         station_dict["Station"] = station
         station_dict["Name"] = name
@@ -114,22 +109,3 @@ def stations():
         stations.append(station_dict)
 
     return jsonify(stations)
-
-@app.route('/api/v1.0/precipitation')
-def precipitation():
-    session = Session(engine)
-    sel = [Measurement.date,Measurement.prcp]
-    queryresult = session.query(*sel).all()
-    session.close()
-
-    precipitation = []
-    for date, prcp in queryresult:
-        prcp_dict = {}
-        prcp_dict["Date"] = date
-        prcp_dict["Precipitation"] = prcp
-        precipitation.append(prcp_dict)
-
-    return jsonify(precipitation)
-
-if __name__ == '__main__':
-    app.run(debug=True)
